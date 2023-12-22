@@ -16,7 +16,7 @@ let platypus = {
     lives: 3, // Number of lives
     invulnerable: false, // Is platypus currently invulnerable?
     invulnerabilityDuration: 120, // Frames of invincibility after being hit
-    invulnerabilityTimer: 0 // Timer for invincibility duration
+    invulnerabilityTimer: 1 // Timer for invincibility duration
 };
 
 // Key controls for platypus movement
@@ -89,11 +89,13 @@ function updateObstacles() {
         ob.y += ob.speed;
 
         // Collision detection
-        if (platypus.x < ob.x + ob.width &&
+        if (!platypus.invulnerable && platypus.x < ob.x + ob.width &&
             platypus.x + platypus.width > ob.x &&
             platypus.y < ob.y + ob.height &&
             platypus.height + platypus.y > ob.y) {
-            // Collision detected - handle accordingly
+            platypus.lives -= 1; // Lose a life
+            platypus.invulnerable = true; // Start invulnerability
+            platypus.invulnerabilityTimer = platypus.invulnerabilityDuration;
         }
 
         drawObstacle(ob);
@@ -188,7 +190,7 @@ function updateEggs() {
         let egg = eggs[i];
 
         if (!egg.collected) {
-            egg.y += egg.speed; // Move egg downward
+            egg.y += egg.speed;
 
             // Check if the platypus collects the egg
             if (platypus.x < egg.x + egg.width &&
@@ -196,26 +198,80 @@ function updateEggs() {
                 platypus.y < egg.y + egg.height &&
                 platypus.height + platypus.y > egg.y) {
                 egg.collected = true;
-                platypus.eggs++; // Increase score or egg count
+                platypus.eggs++; // Increase egg count
+
+                // Increase life for every 10 eggs collected
+                if (platypus.eggs % 10 === 0) {
+                    platypus.lives++;
+                }
             }
 
             drawEgg(egg);
         }
     }
 
-    // Remove eggs that are out of the canvas
+    // Remove eggs out of the canvas
     eggs = eggs.filter(egg => egg.y <= canvas.height);
 }
 
-// Modify the updateGame function to include egg logic
+
+// Update platypus invulnerability
+function updateInvulnerability() {
+    if (platypus.invulnerable) {
+        platypus.invulnerabilityTimer--;
+        if (platypus.invulnerabilityTimer <= 0) {
+            platypus.invulnerable = false;
+        }
+    }
+}
+
+// Shake effect for the platypus when hit
+function drawShakingPlatypus() {
+    if (platypus.invulnerable) {
+        // Shake effect logic
+        ctx.save();
+        ctx.translate(Math.random() * 10 - 5, Math.random() * 10 - 5);
+        drawPlatypus();
+        ctx.restore();
+    } else {
+        drawPlatypus();
+    }
+}
+
+// Function to display the number of lives
+function drawLives() {
+    ctx.font = '18px Arial';
+    ctx.fillStyle = 'black';
+    ctx.fillText('Lives: ' + platypus.lives, 10, 20);
+}
+
+// Function to display the number of eggs collected
+function drawEggCount() {
+    ctx.font = '18px Arial';
+    ctx.fillStyle = 'black';
+    ctx.fillText('Eggs: ' + platypus.eggs, canvas.width - 100, 20);
+}
+
+// Modify the updateGame function to check for game over
 function updateGame() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    updatePlatypusPosition();
-    spawnEggs();
-    updateEggs();
-    updateObstacles();
-    drawPlatypus();
-    requestAnimationFrame(updateGame);
+    if (platypus.lives > 0) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        updatePlatypusPosition();
+        updateInvulnerability();
+        spawnEggs();
+        updateEggs();
+        updateObstacles();
+        drawShakingPlatypus();
+        drawLives();
+        drawEggCount();
+        requestAnimationFrame(updateGame);
+    } else {
+        // Game Over logic
+        ctx.font = '36px Arial';
+        ctx.fillStyle = 'red';
+        ctx.fillText('Game Over!', canvas.width / 2 - 100, canvas.height / 2);
+        ctx.fillText('You saved ' + platypus.eggs + " eggs!", canvas.width / 2 - 100, canvas.height / -4);
+    }
 }
 
 updateGame();
