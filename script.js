@@ -11,8 +11,12 @@ let platypus = {
     height: 30,
     speedY: 0,
     gravity: 0.25,
-    lift: -5, // Upward force when the up arrow key is pressed
-    eggs: 0
+    lift: -5,
+    eggs: 0,
+    lives: 3, // Number of lives
+    invulnerable: false, // Is platypus currently invulnerable?
+    invulnerabilityDuration: 120, // Frames of invincibility after being hit
+    invulnerabilityTimer: 0 // Timer for invincibility duration
 };
 
 // Key controls for platypus movement
@@ -128,12 +132,91 @@ function updatePlatypusPosition() {
     }
 }
 
+// Modified Egg constructor for downward movement
+function Egg(x, y, width, height, speed) {
+    this.x = x;
+    this.y = y;
+    this.width = width;
+    this.height = height;
+    this.speed = speed;
+    this.collected = false;
+}
+
+
+// Array to store eggs
+let eggs = [];
+let eggSpawnRate = 100; // Rate at which eggs spawn (in frames)
+
+// Function to check for overlap with obstacles
+function isOverlappingWithObstacles(egg) {
+    for (let i = 0; i < obstacles.length; i++) {
+        let ob = obstacles[i];
+        if (egg.x < ob.x + ob.width &&
+            egg.x + egg.width > ob.x &&
+            egg.y < ob.y + ob.height &&
+            egg.height + egg.y > ob.y) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Spawn eggs
+// Modified spawnEggs function
+function spawnEggs() {
+    if (frame % eggSpawnRate === 0) {
+        let eggX = Math.floor(Math.random() * (canvas.width - 20));
+        let newEgg = new Egg(eggX, 0, 20, 20, 2); // Egg spawns at the top with a speed of 2
+
+        if (!isOverlappingWithObstacles(newEgg)) {
+            eggs.push(newEgg);
+        }
+    }
+}
+
+// Draw an egg
+function drawEgg(egg) {
+    if (!egg.collected) {
+        ctx.fillStyle = '#fdd835'; // Placeholder color for eggs
+        ctx.fillRect(egg.x, egg.y, egg.width, egg.height);
+    }
+}
+
+// Modified updateEggs function
+function updateEggs() {
+    for (let i = 0; i < eggs.length; i++) {
+        let egg = eggs[i];
+
+        if (!egg.collected) {
+            egg.y += egg.speed; // Move egg downward
+
+            // Check if the platypus collects the egg
+            if (platypus.x < egg.x + egg.width &&
+                platypus.x + platypus.width > egg.x &&
+                platypus.y < egg.y + egg.height &&
+                platypus.height + platypus.y > egg.y) {
+                egg.collected = true;
+                platypus.eggs++; // Increase score or egg count
+            }
+
+            drawEgg(egg);
+        }
+    }
+
+    // Remove eggs that are out of the canvas
+    eggs = eggs.filter(egg => egg.y <= canvas.height);
+}
+
+// Modify the updateGame function to include egg logic
 function updateGame() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     updatePlatypusPosition();
+    spawnEggs();
+    updateEggs();
     updateObstacles();
     drawPlatypus();
     requestAnimationFrame(updateGame);
 }
 
 updateGame();
+
