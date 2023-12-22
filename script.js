@@ -4,16 +4,57 @@ const ctx = canvas.getContext('2d');
 canvas.width = 400;
 canvas.height = 600;
 
+//Load in all images 
+
+const platypusImage = new Image();
+platypusImage.src = 'platypus.png';
+
+const logLeft = new Image();
+logLeft.src = 'log_left.png';
+
+const logMiddle = new Image();
+logMiddle.src = 'log_center.png';
+
+const logRight = new Image();
+logRight.src = 'log_right.png';
+
+const eggImage = new Image();
+eggImage.src = 'egg.png'; // Your egg pixel art image
+
+const riverBackground = new Image();
+riverBackground.src = 'river.png'; // Your seamless river background image
+
+let backgroundY = 0; // Vertical position of the background
+
+function drawBackground() {
+    // Calculate the total height needed to cover the canvas, including the part offscreen
+    const totalBackgroundHeight = canvas.height + riverBackground.height;
+
+    for (let i = -riverBackground.height; i < totalBackgroundHeight; i += riverBackground.height) {
+        ctx.drawImage(riverBackground, 0, backgroundY + i);
+    }
+
+    // Scroll the background
+    backgroundY += 2; // Adjust the speed as needed
+
+    // Reset background position
+    if (backgroundY >= riverBackground.height) {
+        backgroundY = 0;
+    }
+}
+
+
+//Initialize platypus object
 let platypus = {
     x: canvas.width / 2,
     y: canvas.height - 60,
-    width: 50,
-    height: 30,
+    width: 60,
+    height: 40,
     speedY: 0,
     gravity: 0.25,
     lift: -5,
     eggs: 0,
-    lives: 3, // Number of lives
+    lives: 1, // Number of lives
     invulnerable: false, // Is platypus currently invulnerable?
     invulnerabilityDuration: 120, // Frames of invincibility after being hit
     invulnerabilityTimer: 1 // Timer for invincibility duration
@@ -50,8 +91,9 @@ document.addEventListener("keydown", keyDownHandler, false);
 document.addEventListener("keyup", keyUpHandler, false);
 
 function drawPlatypus() {
-    ctx.fillStyle = '#795548'; // Placeholder color for the platypus
-    ctx.fillRect(platypus.x, platypus.y, platypus.width, platypus.height);
+    if (platypusImage.complete) { // Check if image is loaded
+        ctx.drawImage(platypusImage, platypus.x, platypus.y, platypus.width, platypus.height);
+    }
 }
 
 // Obstacle constructor
@@ -65,7 +107,7 @@ function Obstacle(x, width, speed) {
 
 // Array to store obstacles
 let obstacles = [];
-let obstacleInterval = 150; // Interval (in frames) for new obstacles
+let obstacleInterval = 120; // Interval (in frames) for new obstacles
 let frame = 0; // Frame counter
 
 // Draw an obstacle
@@ -73,6 +115,29 @@ function drawObstacle(obstacle) {
     ctx.fillStyle = '#3e2723'; // Placeholder color for obstacles
     ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
 }
+
+// Define the desired size for log segments
+const logSegmentWidth = 50; // Adjust as needed
+const logSegmentHeight = 50; // Adjust as needed
+
+function drawLogObstacle(obstacle) {
+    // Calculate the number of middle segments needed
+    const middleSectionWidth = obstacle.width - (logSegmentWidth * 2); // Subtract the width of left and right segments
+    const middleRepeats = Math.ceil(middleSectionWidth / logSegmentWidth);
+
+    // Draw the left segment
+    ctx.drawImage(logLeft, obstacle.x, obstacle.y, logSegmentWidth, logSegmentHeight);
+
+    // Draw the middle segments
+    for (let i = 0; i < middleRepeats; i++) {
+        ctx.drawImage(logMiddle, obstacle.x + logSegmentWidth + i * logSegmentWidth, obstacle.y, logSegmentWidth, logSegmentHeight);
+    }
+
+    // Draw the right segment
+    ctx.drawImage(logRight, obstacle.x + logSegmentWidth + middleRepeats * logSegmentWidth, obstacle.y, logSegmentWidth, logSegmentHeight);
+}
+
+
 
 // Update obstacles and check for collisions
 function updateObstacles() {
@@ -97,8 +162,7 @@ function updateObstacles() {
             platypus.invulnerable = true; // Start invulnerability
             platypus.invulnerabilityTimer = platypus.invulnerabilityDuration;
         }
-
-        drawObstacle(ob);
+        drawLogObstacle(ob); // Draw log
     }
 
     // Remove obstacles out of the canvas
@@ -168,7 +232,7 @@ function isOverlappingWithObstacles(egg) {
 function spawnEggs() {
     if (frame % eggSpawnRate === 0) {
         let eggX = Math.floor(Math.random() * (canvas.width - 20));
-        let newEgg = new Egg(eggX, 0, 20, 20, 2); // Egg spawns at the top with a speed of 2
+        let newEgg = new Egg(eggX, 0, 10, 10, 2); // Egg spawns at the top with a speed of 2
 
         if (!isOverlappingWithObstacles(newEgg)) {
             eggs.push(newEgg);
@@ -179,8 +243,7 @@ function spawnEggs() {
 // Draw an egg
 function drawEgg(egg) {
     if (!egg.collected) {
-        ctx.fillStyle = '#fdd835'; // Placeholder color for eggs
-        ctx.fillRect(egg.x, egg.y, egg.width, egg.height);
+        ctx.drawImage(eggImage, egg.x, egg.y);
     }
 }
 
@@ -242,7 +305,7 @@ function drawShakingPlatypus() {
 function drawLives() {
     ctx.font = '18px Arial';
     ctx.fillStyle = 'black';
-    ctx.fillText('Lives: ' + platypus.lives, 10, 20);
+    ctx.fillText('Lives: ' + platypus.lives, 20, 20);
 }
 
 // Function to display the number of eggs collected
@@ -252,10 +315,57 @@ function drawEggCount() {
     ctx.fillText('Eggs: ' + platypus.eggs, canvas.width - 100, 20);
 }
 
+
+//Adding function to allow the user to restart the game
+let gameOver = false;
+let gameStarted = false;
+
+// Function to display the 'Press Enter to Start/Restart' prompt
+function drawStartRestartPrompt() {
+    ctx.fillStyle = 'green';
+    ctx.fillRect(canvas.width / 2 - 100, canvas.height / 2 + 50, 200, 40);
+    ctx.font = '20px Arial';
+    ctx.fillStyle = 'white';
+    ctx.textAlign = 'center';
+    ctx.fillText(gameOver ? 'Press Enter to Restart' : 'Press Enter to Start', canvas.width / 2, canvas.height / 2 + 75);
+}
+
+// Function to reset the game
+function resetGame() {
+    platypus.x = canvas.width / 2;
+    platypus.y = canvas.height - 60;
+    platypus.eggs = 0;
+    platypus.lives = 3;
+    platypus.invulnerable = false;
+    obstacles = [];
+    eggs = [];
+    frame = 0;
+    gameOver = false;
+    gameStarted = true; // Set game as started
+    updateGame();
+}
+
+// Event listener for keydown event
+document.addEventListener('keydown', function (event) {
+    if (event.key === "Enter") {
+        if (!gameStarted || gameOver) {
+            resetGame();
+        }
+    }
+});
+
+
 // Modify the updateGame function to check for game over
 function updateGame() {
+
+    if (!gameStarted) {
+        drawStartRestartPrompt();
+        return; // Wait for the player to start the game
+    }
+
     if (platypus.lives > 0) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawBackground(); // Draw the moving background first
         updatePlatypusPosition();
         updateInvulnerability();
         spawnEggs();
@@ -269,9 +379,18 @@ function updateGame() {
         // Game Over logic
         ctx.font = '36px Arial';
         ctx.fillStyle = 'red';
-        ctx.fillText('Game Over!', canvas.width / 2 - 100, canvas.height / 2);
-        ctx.fillText('You saved ' + platypus.eggs + " eggs!", canvas.width / 2 - 100, canvas.height / -4);
+        ctx.textAlign = 'center'; // Align text to the center
+        ctx.fillText('Game Over!', canvas.width / 2, canvas.height / 2);
+
+        // Display the number of eggs saved
+        ctx.font = '24px Arial';
+        ctx.fillStyle = 'black';
+        ctx.fillText('You saved ' + platypus.eggs + ' eggs!', canvas.width / 2, canvas.height / 2 + 30);
+
+        drawStartRestartPrompt();
+        gameOver = true;
     }
+
 }
 
 updateGame();
