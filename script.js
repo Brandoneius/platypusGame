@@ -198,6 +198,11 @@ function updatePlatypusPosition() {
     }
 }
 
+// Define the desired size for the egg
+const eggWidth = 20; // Adjust as needed
+const eggHeight = 20; // Adjust as needed
+
+
 // Modified Egg constructor for downward movement
 function Egg(x, y, width, height, speed) {
     this.x = x;
@@ -240,14 +245,15 @@ function spawnEggs() {
     }
 }
 
-// Draw an egg
+// Modify drawEgg function to adjust the size and check collection
 function drawEgg(egg) {
     if (!egg.collected) {
-        ctx.drawImage(eggImage, egg.x, egg.y);
+        ctx.drawImage(eggImage, egg.x, egg.y, eggWidth, eggHeight);
     }
 }
 
-// Modified updateEggs function
+
+// Update updateEggs function to ensure proper collection logic
 function updateEggs() {
     for (let i = 0; i < eggs.length; i++) {
         let egg = eggs[i];
@@ -256,26 +262,27 @@ function updateEggs() {
             egg.y += egg.speed;
 
             // Check if the platypus collects the egg
-            if (platypus.x < egg.x + egg.width &&
+            if (platypus.x < egg.x + eggWidth &&
                 platypus.x + platypus.width > egg.x &&
-                platypus.y < egg.y + egg.height &&
+                platypus.y < egg.y + eggHeight &&
                 platypus.height + platypus.y > egg.y) {
-                egg.collected = true;
+                egg.collected = true; // Mark the egg as collected
                 platypus.eggs++; // Increase egg count
 
                 // Increase life for every 10 eggs collected
                 if (platypus.eggs % 10 === 0) {
                     platypus.lives++;
                 }
+            } else {
+                drawEgg(egg);
             }
-
-            drawEgg(egg);
         }
     }
 
-    // Remove eggs out of the canvas
-    eggs = eggs.filter(egg => egg.y <= canvas.height);
+    // Remove collected eggs from the array
+    eggs = eggs.filter(egg => !egg.collected);
 }
+
 
 
 // Update platypus invulnerability
